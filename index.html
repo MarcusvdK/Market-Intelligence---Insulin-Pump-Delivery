@@ -180,7 +180,7 @@ body{font-family:var(--font-sans);background:var(--color-background-tertiary);co
     <div class="hdr-sub">Insulin delivery market · European focus · Type 1 diabetes primary</div>
   </div>
   <div class="hdr-badges">
-    <span class="badge badge-cycle">Cycle: April 2026</span>
+    <span class="badge badge-cycle">Cycle: April 2026 · v6.1</span>
     <span class="badge badge-src">Q4 2025 earnings + project docs</span>
     <span class="badge badge-src">Next cycle: May 2026</span>
   </div>
@@ -311,6 +311,17 @@ body{font-family:var(--font-sans);background:var(--color-background-tertiary);co
           <div class="comp-tags"><span class="tag">Terumo Medisafe</span><span class="tag">Medtrum TouchCare</span><span class="tag">CeQur Simplicity</span></div>
           <div class="comp-move"><strong>Intelligence gap:</strong> All in European insulin delivery. CeQur semi-disposable patch in T2D adjacent. Web search required next cycle.</div>
         </div>
+      </div>
+      <div style="margin-top:12px;padding-top:12px;border-top:0.5px solid var(--color-border-tertiary)">
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;font-weight:500">Geographic revenue breakdown — FY2025</div>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px;font-size:11px;color:var(--color-text-secondary);align-items:center">
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;display:inline-block"></span>US revenue</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#378ADD;display:inline-block"></span>EU revenue</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#B4B2A9;display:inline-block"></span>Other intl</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;border:1px dashed #888780;display:inline-block"></span>Estimated ⚠️</span>
+        </div>
+        <div style="position:relative;height:220px"><canvas id="geoChart" role="img" aria-label="Horizontal stacked bar chart of FY2025 revenue by geography for five insulin pump competitors. Insulet leads at $2.7B. Tandem $1.01B mostly US. Medtronic pump segment ~$1.23B. Ypsomed ~$320M mostly EU. Beta Bionics $100M all US.">FY2025 revenue by geography: Insulet $2.7B (US $1.13B, EU $900M, Other $670M); Medtronic pump ~$1.23B (US $650M, EU $330M, Other $250M); Tandem $1.01B (US $760M, EU $165M, Other $85M); Ypsomed ~$320M (EU $260M, Other $60M); Beta Bionics $100M (US $100M).</canvas></div>
+        <div style="font-size:10px;color:var(--color-text-tertiary);margin-top:6px;font-style:italic">Insulet EU/Other estimated from international segment. Ypsomed and Medtronic pump segment estimated — not in project docs. ⚠️</div>
       </div>
       <div style="margin-top:12px;padding-top:12px;border-top:0.5px solid var(--color-border-tertiary)">
         <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px;font-weight:500">Gross margin comparison — available data</div>
@@ -467,6 +478,82 @@ function renderCompCharts(){
   spark('sp3',[12.9,15.0,16.7,20.4,17.6,23.2,27.3,32.1],'#BA7517');
   var mc=document.getElementById('margChart');
   if(mc){new Chart(mc,{type:'bar',data:{labels:['Insulet','Tandem','Beta Bionics'],datasets:[{data:[71.6,54,57],backgroundColor:['#1D9E75','#378ADD','#BA7517'],borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.parsed.y.toFixed(1)+'%';}}}},scales:{x:{grid:{display:false},ticks:{font:{size:11},color:'#888780'}},y:{min:0,max:100,ticks:{callback:function(v){return v+'%';},font:{size:11},color:'#888780'},grid:{color:'rgba(136,135,128,0.15)'}}}}});}
+
+  var gc=document.getElementById('geoChart');
+  if(gc){
+    var isDarkGeo=matchMedia('(prefers-color-scheme: dark)').matches;
+    var geoTickCol=isDarkGeo?'rgba(255,255,255,0.45)':'#888780';
+    var geoLabelCol=isDarkGeo?'rgba(255,255,255,0.82)':'#1a1918';
+    var otherCol=isDarkGeo?'#444441':'#B4B2A9';
+    var geoData=[
+      {name:'Insulet',       us:1130,eu:900, other:670, est:false},
+      {name:'Medtronic (pump)',us:650,eu:330, other:250, est:true},
+      {name:'Tandem',        us:760, eu:165, other:85,  est:false},
+      {name:'Ypsomed',       us:0,   eu:260, other:60,  est:true},
+      {name:'Beta Bionics',  us:100, eu:0,   other:2,   est:false},
+    ];
+    geoData.sort(function(a,b){return (b.us+b.eu+b.other)-(a.us+a.eu+a.other);});
+    var geoLabels=geoData.map(function(d){return d.name;});
+    var geoTotals=geoData.map(function(d){return d.us+d.eu+d.other;});
+    var estimatedIdxs=geoData.reduce(function(acc,d,i){if(d.est)acc.push(i);return acc;},[]);
+
+    var estimatedOverlayPlugin={
+      id:'geoEstOverlay',
+      afterDraw:function(chart){
+        var ctx2=chart.ctx, xs=chart.scales.x, ys=chart.scales.y;
+        estimatedIdxs.forEach(function(i){
+          var yp=ys.getPixelForValue(i);
+          var x0=xs.getPixelForValue(0), x1=xs.getPixelForValue(geoTotals[i]);
+          ctx2.save();
+          ctx2.strokeStyle=isDarkGeo?'rgba(255,255,255,0.3)':'rgba(0,0,0,0.22)';
+          ctx2.lineWidth=1; ctx2.setLineDash([4,3]);
+          ctx2.strokeRect(x0,yp-12,x1-x0,24);
+          ctx2.restore();
+        });
+      }
+    };
+    var totalLabelPlugin={
+      id:'geoTotals',
+      afterDatasetsDraw:function(chart){
+        var ctx2=chart.ctx, xs=chart.scales.x, ys=chart.scales.y;
+        geoTotals.forEach(function(total,i){
+          var xp=xs.getPixelForValue(total), yp=ys.getPixelForValue(i);
+          ctx2.save();
+          ctx2.fillStyle=geoLabelCol; ctx2.font='500 11px sans-serif';
+          ctx2.textAlign='left'; ctx2.textBaseline='middle';
+          ctx2.fillText('$'+Math.round(total)+'M',xp+5,yp);
+          ctx2.restore();
+        });
+      }
+    };
+    new Chart(gc,{
+      type:'bar',
+      plugins:[estimatedOverlayPlugin,totalLabelPlugin],
+      data:{
+        labels:geoLabels,
+        datasets:[
+          {label:'US', data:geoData.map(function(d){return d.us;}), backgroundColor:'#1D9E75', borderRadius:0, borderSkipped:false},
+          {label:'EU', data:geoData.map(function(d){return d.eu;}), backgroundColor:'#378ADD', borderRadius:0, borderSkipped:false},
+          {label:'Other', data:geoData.map(function(d){return d.other;}), backgroundColor:otherCol, borderRadius:3, borderSkipped:'start'}
+        ]
+      },
+      options:{
+        indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        layout:{padding:{right:55}},
+        scales:{
+          x:{stacked:true, max:3200, border:{display:false}, grid:{color:isDarkGeo?'rgba(255,255,255,0.07)':'rgba(0,0,0,0.06)'}, ticks:{color:geoTickCol,font:{size:11},callback:function(v){return '$'+Math.round(v)+'M';},maxTicksLimit:6}},
+          y:{stacked:true, border:{display:false}, grid:{display:false}, ticks:{color:geoLabelCol,font:{size:11,weight:'500'}}}
+        },
+        plugins:{
+          legend:{display:false},
+          tooltip:{callbacks:{
+            label:function(c){return ' '+c.dataset.label+': $'+Math.round(c.parsed.x)+'M';},
+            footer:function(items){return 'Total: $'+Math.round(geoTotals[items[0].dataIndex])+'M';}
+          }}
+        }
+      }
+    });
+  }
 }
 
 /* ── EU REIMBURSEMENT MAP ── */
